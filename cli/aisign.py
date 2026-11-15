@@ -39,23 +39,23 @@ def pick_font(cands, size):
     return ImageFont.load_default()
 
 
-def build_mask(w, h, text, sub, scale_ref=1280):
+def build_mask(w, h, text, sub, scale_ref=1280, font_scale=1.0):
     mask = Image.new("L", (w, h), 0)
     d = ImageDraw.Draw(mask)
     scale = w / scale_ref
-    f1 = pick_font(FONT_B_CANDIDATES, int(40 * scale))
-    f2 = pick_font(FONT_R_CANDIDATES, int(30 * scale))
+    f1 = pick_font(FONT_B_CANDIDATES, int(40 * scale * font_scale))
+    f2 = pick_font(FONT_R_CANDIDATES, int(30 * scale * font_scale))
     # tile width from measured text width so tiles never overlap badly
     tw = d.textlength(text, font=f1)
     tile_w = int(tw + 90 * scale)
-    step_y = int(300 * scale)
+    step_y = int(300 * scale * font_scale)
     row = 0
     for y in range(int(60 * scale), h, step_y):
         offset = -int(120 * scale) + (row % 2) * int(tile_w // 2)
         for x in range(offset, w, tile_w):
             d.text((x, y), text, font=f1, fill=255)
             if sub:
-                d.text((x, y + int(52 * scale)), sub, font=f2, fill=255)
+                d.text((x, y + int(52 * scale * font_scale)), sub, font=f2, fill=255)
         row += 1
     return mask
 
@@ -75,15 +75,17 @@ def main():
     ap.add_argument("--text", default="ORIGINAL BY @homurasaki_eris")
     ap.add_argument("--sub", default="not the reposter's work")
     ap.add_argument("--strength", type=int, default=20)
+    ap.add_argument("--font-scale", type=float, default=1.0,
+                    help="font size multiplier (e.g. 1.5 or 2.0); larger glyphs survive recompression better at low strength")
     ap.add_argument("--output", default=None)
     args = ap.parse_args()
 
     img = Image.open(args.input).convert("RGB")
-    mask = build_mask(img.width, img.height, args.text, args.sub)
+    mask = build_mask(img.width, img.height, args.text, args.sub, font_scale=args.font_scale)
     out = embed(img, mask, args.strength)
     dest = args.output or os.path.splitext(args.input)[0] + f"_signed_S{args.strength}.png"
     out.save(dest)
-    print(f"saved: {dest} (strength={args.strength}, text={args.text!r})")
+    print(f"saved: {dest} (strength={args.strength}, font_scale={args.font_scale}, text={args.text!r})")
 
 
 if __name__ == "__main__":

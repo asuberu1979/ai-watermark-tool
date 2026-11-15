@@ -102,6 +102,14 @@
       <label>署名 3行目 <span class="opt">（任意）</span></label>
       <input type="text" id="line3" value="not the reposter's work">
 
+      <label>文字サイズ</label>
+      <select id="fontscale">
+        <option value="1">標準（×1.0）</option>
+        <option value="1.5">大（×1.5）― 検証中</option>
+        <option value="2">特大（×2.0）― 検証中</option>
+      </select>
+      <div class="guide" style="min-height:0;margin-top:4px">文字が大きいほど、圧縮や縮小で潰れにくくなります。その分、滑らかな場所では模様として気づかれやすくなります。「大きい文字＋弱い強さ」が成り立つかは検証中です。</div>
+
       <label>透かしの強さ</label>
       <div class="srow"><span class="sbig" id="sval">15</span><span style="color:var(--sub);font-size:12.5px">/ 40</span></div>
       <input type="range" id="strength" min="5" max="40" value="15">
@@ -193,16 +201,17 @@ function buildMask(w, h, lines) {
   d.fillStyle = "#000"; d.fillRect(0, 0, w, h);
   d.fillStyle = "#fff";
   const scale = w / 1280;
+  const fk = parseFloat($("fontscale").value);
   const fonts = [
-    "bold " + Math.round(40 * scale) + "px sans-serif",
-    "bold " + Math.round(34 * scale) + "px sans-serif",
-    Math.round(30 * scale) + "px sans-serif"
+    "bold " + Math.round(40 * scale * fk) + "px sans-serif",
+    "bold " + Math.round(34 * scale * fk) + "px sans-serif",
+    Math.round(30 * scale * fk) + "px sans-serif"
   ];
   let maxTw = 0;
   lines.forEach((t, i) => { d.font = fonts[Math.min(i, 2)]; maxTw = Math.max(maxTw, d.measureText(t).width); });
   const tileW = Math.round(maxTw + 90 * scale);
-  const stepY = Math.round(300 * scale);
-  const lineGap = Math.round(52 * scale);
+  const stepY = Math.round(300 * scale * fk);
+  const lineGap = Math.round(52 * scale * fk);
   let row = 0;
   for (let y = Math.round(60 * scale); y < h; y += stepY, row++) {
     const offset = -Math.round(120 * scale) + (row % 2) * Math.floor(tileW / 2);
@@ -283,6 +292,7 @@ $("presets").addEventListener("click", e => {
   setStrength(parseInt(btn.dataset.s, 10));
 });
 ["line1", "line2", "line3"].forEach(id => $(id).addEventListener("input", schedulePreview));
+$("fontscale").addEventListener("change", schedulePreview);
 $("sguide").textContent = guideText(15);
 
 downloadBtn.addEventListener("click", () => {
@@ -295,7 +305,8 @@ downloadBtn.addEventListener("click", () => {
     full.toBlob(blob => {
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = "signed_S" + $("strength").value + "." + (fmt === "jpeg" ? "jpg" : "png");
+      const fk = parseFloat($("fontscale").value);
+      a.download = "signed_S" + $("strength").value + (fk !== 1 ? "_F" + fk : "") + "." + (fmt === "jpeg" ? "jpg" : "png");
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 4000);
       downloadBtn.disabled = false; downloadBtn.textContent = "署名入り画像をダウンロード";
