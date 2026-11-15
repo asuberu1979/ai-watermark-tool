@@ -23,10 +23,12 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 FONT_B_CANDIDATES = [
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
     "/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf",
 ]
 FONT_R_CANDIDATES = [
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
 ]
@@ -39,12 +41,24 @@ def pick_font(cands, size):
     return ImageFont.load_default()
 
 
-def build_mask(w, h, text, sub, scale_ref=1280, font_scale=1.0):
+def build_mask(w, h, text, sub, scale_ref=1280, font_scale=1.0, placement="tile"):
     mask = Image.new("L", (w, h), 0)
     d = ImageDraw.Draw(mask)
     scale = w / scale_ref
     f1 = pick_font(FONT_B_CANDIDATES, int(40 * scale * font_scale))
     f2 = pick_font(FONT_R_CANDIDATES, int(30 * scale * font_scale))
+    gap = int(52 * scale * font_scale)
+    lines = [(text, f1)] + ([(sub, f2)] if sub else [])
+    if placement in ("br", "bl"):
+        # single spot near a bottom corner: tidy, but a crop removes it entirely
+        margin = int(36 * scale)
+        y = h - margin - gap * (len(lines) - 1) - int(40 * scale * font_scale)
+        for t, f in lines:
+            tw = d.textlength(t, font=f)
+            x = w - margin - tw if placement == "br" else margin
+            d.text((x, y), t, font=f, fill=255)
+            y += gap
+        return mask
     # tile width from measured text width so tiles never overlap badly
     tw = d.textlength(text, font=f1)
     tile_w = int(tw + 90 * scale)
@@ -55,7 +69,7 @@ def build_mask(w, h, text, sub, scale_ref=1280, font_scale=1.0):
         for x in range(offset, w, tile_w):
             d.text((x, y), text, font=f1, fill=255)
             if sub:
-                d.text((x, y + int(52 * scale * font_scale)), sub, font=f2, fill=255)
+                d.text((x, y + gap), sub, font=f2, fill=255)
         row += 1
     return mask
 
@@ -77,11 +91,13 @@ def main():
     ap.add_argument("--strength", type=int, default=20)
     ap.add_argument("--font-scale", type=float, default=1.0,
                     help="font size multiplier (e.g. 1.5 or 2.0); larger glyphs survive recompression better at low strength")
+    ap.add_argument("--placement", choices=["tile", "br", "bl"], default="tile",
+                    help="tile = full tiling (default, crop-resistant); br/bl = single spot at a bottom corner (tidy but crop-fragile)")
     ap.add_argument("--output", default=None)
     args = ap.parse_args()
 
     img = Image.open(args.input).convert("RGB")
-    mask = build_mask(img.width, img.height, args.text, args.sub, font_scale=args.font_scale)
+    mask = build_mask(img.width, img.height, args.text, args.sub, font_scale=args.font_scale, placement=args.placement)
     out = embed(img, mask, args.strength)
     dest = args.output or os.path.splitext(args.input)[0] + f"_signed_S{args.strength}.png"
     out.save(dest)

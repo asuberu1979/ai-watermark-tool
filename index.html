@@ -102,6 +102,14 @@
       <label>署名 3行目 <span class="opt">（任意）</span></label>
       <input type="text" id="line3" value="not the reposter's work">
 
+      <label>配置</label>
+      <select id="placement">
+        <option value="tile">全面タイル（証言用・推奨）</option>
+        <option value="br">右下に1か所（見た目すっきり）</option>
+        <option value="bl">左下に1か所（見た目すっきり）</option>
+      </select>
+      <div class="guide" style="min-height:0;margin-top:4px">1か所だけだと作品はすっきりしますが、切り抜かれると署名ごと消えます。無断転載への「証言」が目的なら全面タイルが本筋です。</div>
+
       <label>文字サイズ</label>
       <select id="fontscale">
         <option value="1">標準（×1.0）</option>
@@ -212,6 +220,18 @@ function buildMask(w, h, lines) {
   const tileW = Math.round(maxTw + 90 * scale);
   const stepY = Math.round(300 * scale * fk);
   const lineGap = Math.round(52 * scale * fk);
+  const placement = $("placement").value;
+  if (placement !== "tile") {
+    const margin = Math.round(36 * scale);
+    const firstBase = h - margin - (lines.length - 1) * lineGap;
+    lines.forEach((t, i) => {
+      d.font = fonts[Math.min(i, 2)];
+      const tw = d.measureText(t).width;
+      const x = placement === "br" ? w - margin - tw : margin;
+      d.fillText(t, x, firstBase + i * lineGap);
+    });
+    return mask;
+  }
   let row = 0;
   for (let y = Math.round(60 * scale); y < h; y += stepY, row++) {
     const offset = -Math.round(120 * scale) + (row % 2) * Math.floor(tileW / 2);
@@ -293,6 +313,7 @@ $("presets").addEventListener("click", e => {
 });
 ["line1", "line2", "line3"].forEach(id => $(id).addEventListener("input", schedulePreview));
 $("fontscale").addEventListener("change", schedulePreview);
+$("placement").addEventListener("change", schedulePreview);
 $("sguide").textContent = guideText(15);
 
 downloadBtn.addEventListener("click", () => {
