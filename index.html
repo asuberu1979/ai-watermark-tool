@@ -124,8 +124,10 @@
       <input type="range" id="strength" min="5" max="40" value="15">
       <div class="presets" id="presets">
         <button data-s="10">10<br>ほぼ見えない</button>
+        <button data-s="12">12<br>控えめ</button>
         <button data-s="15" class="on">15<br>推奨・弱</button>
         <button data-s="20">20<br>推奨・強</button>
+        <button data-s="25">25<br>強め</button>
         <button data-s="30">30<br>確実</button>
       </div>
       <div class="guide" id="sguide"></div>
@@ -199,7 +201,8 @@ function getLines() {
 
 function guideText(s) {
   if (s <= 10) return "ほぼ視認できません。明るく滑らかな画像ではGrokの判読実績がありますが、暗く・細部の多い画像では読めなかった実測があります。迷ったら15以上を。";
-  if (s <= 20) return "推奨ゾーン。滑らかな場所では薄く見えますが、多くのAIで読まれやすい強さです。";
+  if (s <= 15) return "バランスの良い標準域です。迷ったらここを。暗く・細部の多い画像では、文字サイズ×1.5〜2.0との併用で安定します。";
+  if (s <= 20) return "推奨ゾーン（強）。読み取りは安定しますが、滑らかな場所では薄く目立ちます。";
   return "人間にも見えやすくなります。その分、読み取りは最も確実です。";
 }
 
