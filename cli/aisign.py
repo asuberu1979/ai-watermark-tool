@@ -49,6 +49,24 @@ def build_mask(w, h, text, sub, scale_ref=1280, font_scale=1.0, placement="tile"
     f2 = pick_font(FONT_R_CANDIDATES, int(30 * scale * font_scale))
     gap = int(52 * scale * font_scale)
     lines = [(text, f1)] + ([(sub, f2)] if sub else [])
+    if placement == "five":
+        # four corners + centre: survives edge trims and centre crops better than a single spot
+        margin = int(36 * scale)
+        main_h = int(40 * scale * font_scale)
+        spots = [("l", "t"), ("r", "t"), ("l", "b"), ("r", "b"), ("c", "c")]
+        for ax, ay in spots:
+            if ay == "t":
+                y = margin
+            elif ay == "b":
+                y = h - margin - gap * (len(lines) - 1) - main_h
+            else:
+                y = h // 2 - (gap * (len(lines) - 1)) // 2 - main_h // 2
+            for t, f in lines:
+                tw = d.textlength(t, font=f)
+                x = margin if ax == "l" else (w - margin - tw if ax == "r" else (w - tw) // 2)
+                d.text((x, y), t, font=f, fill=255)
+                y += gap
+        return mask
     if placement in ("br", "bl"):
         # single spot near a bottom corner: tidy, but a crop removes it entirely
         margin = int(36 * scale)
@@ -91,8 +109,8 @@ def main():
     ap.add_argument("--strength", type=int, default=20)
     ap.add_argument("--font-scale", type=float, default=1.0,
                     help="font size multiplier (e.g. 1.5 or 2.0); larger glyphs survive recompression better at low strength")
-    ap.add_argument("--placement", choices=["tile", "br", "bl"], default="tile",
-                    help="tile = full tiling (default, crop-resistant); br/bl = single spot at a bottom corner (tidy but crop-fragile)")
+    ap.add_argument("--placement", choices=["tile", "five", "br", "bl"], default="tile",
+                    help="tile = full tiling (default, crop-resistant); five = four corners + centre; br/bl = single spot at a bottom corner (tidy but crop-fragile)")
     ap.add_argument("--output", default=None)
     args = ap.parse_args()
 

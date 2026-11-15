@@ -105,10 +105,11 @@
       <label>配置</label>
       <select id="placement">
         <option value="tile">全面タイル（証言用・推奨）</option>
+        <option value="five">5か所（四隅＋中央）</option>
         <option value="br">右下に1か所（見た目すっきり）</option>
         <option value="bl">左下に1か所（見た目すっきり）</option>
       </select>
-      <div class="guide" style="min-height:0;margin-top:4px">1か所だけだと作品はすっきりしますが、切り抜かれると署名ごと消えます。無断転載への「証言」が目的なら全面タイルが本筋です。</div>
+      <div class="guide" style="min-height:0;margin-top:4px">1か所だけだと作品はすっきりしますが、切り抜かれると署名ごと消えます。「5か所」は四隅と中央に置く中間案で、端の切り抜きや中央の切り抜きでもどれか残りやすい配置です。無断転載への「証言」が目的なら全面タイルが本筋です。</div>
 
       <label>文字サイズ</label>
       <select id="fontscale">
@@ -221,6 +222,28 @@ function buildMask(w, h, lines) {
   const stepY = Math.round(300 * scale * fk);
   const lineGap = Math.round(52 * scale * fk);
   const placement = $("placement").value;
+  if (placement === "five") {
+    const margin = Math.round(36 * scale);
+    const mainPx = Math.round(40 * scale * fk);
+    const spots = [
+      { ax: "l", ay: "t" }, { ax: "r", ay: "t" },
+      { ax: "l", ay: "b" }, { ax: "r", ay: "b" },
+      { ax: "c", ay: "c" }
+    ];
+    spots.forEach(s => {
+      let firstBase;
+      if (s.ay === "t") firstBase = margin + mainPx;
+      else if (s.ay === "b") firstBase = h - margin - (lines.length - 1) * lineGap;
+      else firstBase = Math.round(h / 2 - ((lines.length - 1) * lineGap) / 2);
+      lines.forEach((t, i) => {
+        d.font = fonts[Math.min(i, 2)];
+        const tw = d.measureText(t).width;
+        const x = s.ax === "l" ? margin : s.ax === "r" ? w - margin - tw : Math.round((w - tw) / 2);
+        d.fillText(t, x, firstBase + i * lineGap);
+      });
+    });
+    return mask;
+  }
   if (placement !== "tile") {
     const margin = Math.round(36 * scale);
     const firstBase = h - margin - (lines.length - 1) * lineGap;
